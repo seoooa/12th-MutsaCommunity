@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import { Body1 } from "../../styles/font";
 import { Grey2, Red, White } from "../../styles/color";
+import { useNavigate } from "react-router-dom";
+import { instance } from "../../api/instance";
 
 function LoginSection() {
   //TODOS
@@ -9,17 +11,71 @@ function LoginSection() {
   // 2. useRef 사용하여 LoginSection컴포넌트가 첫 마운트되었을떄 아이디 input에 포커스 두기
   // 3. 로그인 버튼을 눌렀을 때, 아이디와 비밀번호를 서버에 전송하고 response 전달받기, response의 유형(성공,실패) 에 따라 예외처리 구현
 
+  const [id, setId] = useState();
+  const [pw, setPw] = useState();
+  const [isPendingRequest, setIsPendingRequest] = useState(false);
+
+  const inputRef = useRef();
+  const navigate = useNavigate();
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "id") {
+      setId(value);
+    } else {
+      setPw(value);
+    }
+  };
+
+  const postLoginData = async () => {
+    if (isPendingRequest) return;
+    const body = {
+      email: id,
+      password: pw,
+    };
+    try {
+      setIsPendingRequest(true);
+      const res = await instance.post("accounts/login/", body);
+      if (res.status === 200) {
+        localStorage.setItem("accessToken", res.data.access);
+        navigate("/");
+      } else {
+        alert("아이디 또는 비밀번호가 일치하지 않습니다");
+      }
+    } catch (err) {
+      alert("아이디 또는 비밀번호가 일치하지 않습니다");
+    } finally {
+      setIsPendingRequest(false);
+    }
+  };
+
+  useEffect(() => {
+    inputRef.current.focus();
+  }, []);
+
   return (
     <LoginSectionWrapper>
       <div className="id">
         <Body1>아이디</Body1>
-        <LoginInput placeholder="아이디를 입력해주세요." />
+        <LoginInput
+          name="id"
+          ref={inputRef}
+          value={id}
+          placeholder="아이디를 입력해주세요."
+          onChange={handleInputChange}
+        />
       </div>
       <div className="pw">
         <Body1>비밀번호</Body1>
-        <LoginInput type="password" placeholder="비밀번호를 입력해주세요" />
+        <LoginInput
+          name="pw"
+          value={pw}
+          type="password"
+          placeholder="비밀번호를 입력해주세요"
+          onChange={handleInputChange}
+        />
       </div>
-      <LoginButton>로그인</LoginButton>
+      <LoginButton onClick={postLoginData}>로그인</LoginButton>
     </LoginSectionWrapper>
   );
 }

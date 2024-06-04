@@ -1,17 +1,62 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import CommentItem from "./CommentItem";
 import { Black, White } from "../../styles/color";
+import { useParams } from "react-router-dom";
+import { instance } from "../../api/instance";
 
 function CommentListSection() {
+  const { postid } = useParams();
+  const [commentList, setCommentList] = useState([]);
+  const [comment, setComment] = useState("");
+
+  const fetchCommentList = async () => {
+    try {
+      const res = await instance.get(
+        `/board/post-detail/${postid}/comment-list/`
+      );
+      setCommentList(res.data.comments);
+    } catch (err) {
+      alert(err);
+    }
+  };
+
+  const handleClickPostButton = async () => {
+    const headers = {
+      Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+    };
+    await instance.post(
+      `/board/post-detail/${postid}/comment-create/`,
+      { content: comment },
+      { headers }
+    );
+    setComment("");
+    fetchCommentList();
+  };
+
+  useEffect(() => {
+    fetchCommentList();
+  }, []);
+
   return (
     <CommentListSectionWrapper>
-      <CommentCount>댓글 4</CommentCount>
-      <CommentItem />
-      <CommentItem />
-      <CommentItem />
-      <CommentTextArea placeholder="댓글을 작성해주세요" />
-      <PostButton>댓글 작성하기</PostButton>
+      <CommentCount>댓글 {commentList.length}</CommentCount>
+      {commentList.map((item) => (
+        <CommentItem
+          key={item.id}
+          content={item.content}
+          created_at={item.created_at}
+          user={item.user}
+        />
+      ))}
+      <CommentTextArea
+        placeholder="댓글을 작성해주세요"
+        value={comment}
+        onChange={(e) => {
+          setComment(e.target.value);
+        }}
+      />
+      <PostButton onClick={handleClickPostButton}>댓글 작성하기</PostButton>
     </CommentListSectionWrapper>
   );
 }
